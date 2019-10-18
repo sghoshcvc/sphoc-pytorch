@@ -20,7 +20,6 @@ class SPHOC(nn.Module):
         self.decoder = decoder
         self.length_embedding = length_embedding
         self.pos_embedding = position_embedding
-        self.retval ={}
 
         if enocder_type=='inception':
             self.encoder = TextInception3()
@@ -56,13 +55,13 @@ class SPHOC(nn.Module):
 
 
         print(nChannels)
-        # nChannels = self.nChannels
-        self.att = nn.Conv2d(in_channels=self.nChannels, out_channels=55, kernel_size=1, stride=1)
+        nChannels = self.nChannels
+        self.att = nn.Conv2d(in_channels=nChannels, out_channels=55, kernel_size=1, stride=1)
         #self.fc1 = nn.Linear(512, 512)
         self.fc2 = nn.Linear(self.nChannels, voc_size)
         if decoder:
             self.decoder = True
-            self.decoder = PhocDecoder(nChannels, maxlen=max_len, voc_size=voc_size)
+            self.decoder = PhocDecoder(self.nChannels, maxlen=max_len, voc_size=voc_size)
 
 
 
@@ -99,7 +98,6 @@ class SPHOC(nn.Module):
     def forward(self, x):
 
         conv_filters = self.encoder(x)
-        retval = {}
         # print(conv_filters.shape)
         # print('before length estimate')
 
@@ -133,10 +131,8 @@ class SPHOC(nn.Module):
         att_y = att_y.contiguous().view(-1, feat_size)
         #att_y = self.fc1(att_y)
         #att_y = F.dropout(att_y, p=0.5, training=self.training)
-        # phoc_1 = self.fc2(att_y).view(batch_size, -1, 36)
         phoc = self.fc2(att_y).view(batch_size, -1)
         retval['phoc'] =phoc
-
         if self.decoder:
             pred_chars = self.decoder(att_y.view(batch_size, -1, 512))
             retval['char_vec'] = pred_chars
@@ -144,10 +140,9 @@ class SPHOC(nn.Module):
         #phoc = y_filters
 
         #y = self.decoder(y_filters,indices1,indices2,size1, size2)
-        # if self.decoder:
-
         if self.length_embedding:
             retval['length_vec'] = len_vec
+        
 
         return retval
 

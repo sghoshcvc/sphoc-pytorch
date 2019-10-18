@@ -39,7 +39,28 @@ def get_most_common_n_grams(words, num_results=50, len_ngram=2):
     top_ngrams = sorted_list[:num_results]
     return {k: i for i, (k, _) in enumerate(top_ngrams)}
 
+def build_char_descriptor(words, phoc_unigrams, wlen=10):
+    
+    char_dict = { v : k+1 for k,v in enumerate(phoc_unigrams) }
+    char_dict['-'] = 0
+    char_vec = np.zeros((len(words),wlen))
+    print(char_vec.shape)
 
+    for i,word in enumerate(words):
+        print(word)
+        print(np.minimum(wlen,len(word)))
+        word=word.ljust(wlen,'-')
+        word =word[0:wlen]
+
+        #x=np.array([char_dict[i]+1 for i in word[0:np.min(wlen,len(word))]])
+        #print(x.shape)
+        #print(np.array([char_dict[i]+1 for i in word]))
+        
+        x = [char_dict[ind] for ind in word]
+        
+        char_vec[i] = x
+        print(char_vec[i]) 
+    return char_vec
 def build_phoc_descriptor(words, phoc_unigrams, unigram_levels,  #pylint: disable=too-many-arguments, too-many-branches, too-many-locals
                           bigram_levels=None, phoc_bigrams=None,
                           split_character=None, on_unknown_unigram='nothing',

@@ -14,9 +14,10 @@ from torch.utils.data import Dataset
 import scipy.io
 from skimage.transform import resize
 
-from dataset.phoc import build_phoc_descriptor, get_most_common_n_grams
+from dataset.phoc import build_phoc_descriptor, get_most_common_n_grams, build_char_descriptor
 from dataset.image_size import check_size
 from dataset.homography_augmentation import HomographyAugmentation
+import sys
 
 
 class IAMDataset(Dataset):
@@ -57,6 +58,9 @@ class IAMDataset(Dataset):
         self.fixed_image_size = fixed_image_size
 
         self.path = gw_root_dir
+        self.heights = []
+        self.widths = []
+        self.im_list = []
 
         #train_img_names = [line.strip() for line in open(os.path.join(gw_root_dir, 'old_sets/trainset.txt'))]
         #test_img_names = [line.strip() for line in open(os.path.join(gw_root_dir, 'old_sets/testset.txt'))]
@@ -88,17 +92,29 @@ class IAMDataset(Dataset):
                 # print word_img_filename
                 try:
                     word_img = img_io.imread(word_img_filename)
+                    # print(word_img_filename)
+                    # print(word_img.shape)
+                    # ht, wd = word_img.shape
+                    # ap = wd/np.float(ht)
+                    # wd_mod = int(40.0 * ap)
+                    # if wd_mod<=500:
+                    # # self.heights.append(ht)
+                    # # self.widths.append(wd_mod)
+                    #     self.im_list.append(word_img_filename)
+
                 except:
                     continue
                 # scale black pixels to 1 and white pixels to 0
+                word_img = 1 - word_img.astype(np.float32) / 255.0
                 ht, wd = word_img.shape
                 ap = wd/np.float(ht)
                 wd_mod = int(80.0 * ap)
-                # word_img = 1 - word_img.astype(np.float32) / 255.0
-                
 
-                word_img = check_size(img=word_img, min_image_width_height=min_image_width_height, fixed_image_size=(wd_mod, 80))
-                word_img = 1 - word_img.astype(np.float32) / 255.0
+                # if wd_mod > 300:
+                #     continue
+                word_img = check_size(img=word_img, min_image_width_height=min_image_width_height)
+                # word_img = check_size(img=word_img, min_image_width_height=min_image_width_height, fixed_image_size=(wd_mod, 80))
+                # sys.exit()
                 words.append((word_img, transcr.lower()))
 
                 '''
@@ -161,6 +177,8 @@ class IAMDataset(Dataset):
             # print(word)
             self.length_embeddings[ind][:x] = 1
             # print(self.length_embeddings[ind])
+        # self.length_embeddings = np.zeros((len(word_strings), 10), dtype=np.float32)
+        self.char_embeddings = build_char_descriptor(words=word_strings, phoc_unigrams=unigrams)
 
 
     def mainLoader(self, partition=None, transforms=HomographyAugmentation()):
@@ -173,13 +191,19 @@ class IAMDataset(Dataset):
             if partition == 'train':
                 self.word_list = [x for i, x in enumerate(self.words) if self.train_ids[i] == 1]
                 self.word_string_embeddings = [x for i, x in enumerate(self.word_embeddings) if self.train_ids[i] == 1]
+                self.length_embeddings = [x for i, x in enumerate(self.length_embeddings) if self.train_ids[i] == 1]
+                self.char_string_embeddings = [x for i, x in enumerate(self.char_embeddings) if self.train_ids[i] == 1]
             else:
                 self.word_list = [x for i, x in enumerate(self.words) if self.test_ids[i] == 1]
                 self.word_string_embeddings = [x for i, x in enumerate(self.word_embeddings) if self.test_ids[i] == 1]
+                self.length_embeddings = [x for i, x in enumerate(self.length_embeddings) if self.test_ids[i] == 1]
+                self.char_string_embeddings = [x for i, x in enumerate(self.char_embeddings) if self.test_ids[i] == 1]
         else:
             # use the entire dataset
             self.word_list = self.words
             self.word_string_embeddings = self.word_embeddings
+            self.char_string_embeddings = self.char_embeddings
+            self.length_embeddings = self.length_embeddings
 
         if partition == 'test':
             # create queries
@@ -238,12 +262,14 @@ class IAMDataset(Dataset):
         word_img = torch.from_numpy(word_img)
         embedding = self.word_string_embeddings[index]
         embedding = torch.from_numpy(embedding)
+        embedding_char = self.char_string_embeddings[index]
+        embedding_char = torch.from_numpy(embedding_char)
         len_embed = self.length_embeddings[index]
         len_embed = torch.from_numpy(len_embed)
         class_id = self.label_encoder.transform([self.word_list[index][1]])
         is_query = self.query_list[index]
 
-        return word_img, embedding, len_embed, class_id, is_query
+        return word_img, embedding, embedding_char, len_embed, class_id, is_query
 
     # fixed sized image
     @staticmethod

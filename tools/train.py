@@ -49,8 +49,8 @@ def learning_rate_step_parser(lrs_string):
     return [(int(elem.split(':')[0]), float(elem.split(':')[1])) for elem in lrs_string.split(',')]
 
 def train():
-    logger = logging.getLogger('PHOCNet-Experiment::train')
-    logger.info('--- Running PHOCNet Training ---')
+    logger = logging.getLogger('SPHOC-Experiment::train')
+    logger.info('--- Running SPHOC Training ---')
 
     # argument parsing
     parser = argparse.ArgumentParser()    
@@ -170,7 +170,7 @@ def train():
                              shuffle=False,
                              num_workers=8)
     # load CNN
-    logger.info('Preparing PHOCNet...')
+    logger.info('Preparing SPHOC...')
 
     #cnn = PHOCNet(n_out=train_set[0][1].shape[0],
     #              input_channels=1,
@@ -186,10 +186,10 @@ def train():
     load_pretrained = False
     if load_pretrained:
         #cnn.load_state_dict(torch.load('PHOCNet.pt', map_location=lambda storage, loc: storage))
-        logger.info('Preparing PHOCNet... loading pretrained model')
+        logger.info('Preparing SPHOC... loading pretrained model')
         sphoc_model = torch.load('SPHOC_best.pt')
 
-        logger.info('Preparing PHOCNet... loaded pretrained model')
+        logger.info('Preparing SPHOC... loaded pretrained model')
 
     else:
 
